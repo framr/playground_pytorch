@@ -125,7 +125,6 @@ def preprocess(infilename, outfilename, feature_cols, target_col,
 
 
 if __name__ == "__main__":
-
     logging.basicConfig(
         format='[%(asctime)s] %(levelname).1s %(message)s',
         datefmt="%Y.%m.%d %H:%M:%S",

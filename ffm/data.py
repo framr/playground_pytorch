@@ -4,16 +4,17 @@ from collections import namedtuple
 
 Dataset = namedtuple("Dataset", "X y")
 
+
 def calc_features(example, features, feat_conf):
     return [feat_conf.get(f, int)(example[f]) for f in features]
 
 
-def read_dataset(filename, feature_cols, target_col, feat_conf=None, batch_size=64, sep="\t", skip_lines=1):
+def read_dataset(filename, feature_cols, target_col, feat_conf=None, sep="\t", skip_lines=1):
     feat_conf = feat_conf or {}
     X = []
     y = []
     for example in csvreader(filename, sep=sep, skip_lines=skip_lines):
-        X.append(calc_features(example, feat_conf))
+        X.append(calc_features(example, feature_cols, feat_conf))
         y.append(example[target_col])
     return Dataset(X, y)
 
