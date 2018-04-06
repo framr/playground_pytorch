@@ -1,9 +1,5 @@
-"""
-Simple ffm
-"""
 import torch
 import torch.nn as nn
-import math
 
 
 def glorot(m):
@@ -19,26 +15,38 @@ def glorot(m):
     m.weight.data.uniform_(-scale, scale)
 
 
-class FFM(nn.Module):
+class DeepFM(nn.Module):
     def __init__(self, *args, **kwargs):
         super(FFM, self).__init__()
         self.num_features = kwargs["num_features"]
         self.dim = kwargs["dim"]
         self.num_fields = kwargs["num_fields"]
-        self.use_unary = kwargs["use_unary"]
+        self.deep_layers = kwargs["deep_layers"]
+        self.num_deep_layers = len(self.deep_layers)
 
         # create parameters
+        # embeddings
         self.embeddings = nn.Embedding(self.num_features, self.dim)
-        out_dim = self.dim
-        if self.use_unary:
-            self.unary = nn.Embedding(self.num_features, 1)
-            out_dim += self.num_fields
-        self.projection = nn.Linear(out_dim, 1)
+        self.out_dim = self.dim
+
+        # unary weights
+        self.unary = nn.Embedding(self.num_features, 1)
+        self.out_dim += self.num_fields
+
+        # deep weights
+        if self.deep_layers:
+            self.deep_0 = nn.Linear(self.num_fields * self.dim, self.deep_layers[0])
+        for i in range(1, self.num_deep_layers):
+            setattr(self, "deep_%d" % i, nn.Linear(self.deep_layers[i - 1], self.deep_layers[i]))
+            self.out_dim += self.deep_layers[-1]
+
+        self.projection = nn.Linear(self.out_dim, 1)
         # initialize parameters
         glorot(self.embeddings)
         glorot(self.projection)
-        if self.use_unary:
-            glorot(self.unary)
+        glorot(self.unary)
+        for i in range(self.num_deep_layers):
+            glorot(getattr(self, "deep_%i"))
 
     def forward(self, X):
         """
@@ -51,14 +59,13 @@ class FFM(nn.Module):
         embeddings_sum = embeddings.sum(dim=1)  # B x D
         sum_squares = torch.mul(embeddings, embeddings).sum(dim=1)  # B x D
         quadratic = 0.5 * (torch.mul(embeddings_sum, embeddings_sum) - sum_squares)
-        if self.use_unary:
-            unary = self.unary(X)  # B x F x 1
-            unary = unary.squeeze(dim=2)  # B x F
-            out = torch.cat((quadratic, unary), dim=1)  # B x (F + D)
-        else:
-            out = quadratic
+        unary = self.unary(X)  # B x F x 1
+        unary = unary.squeeze(dim=2)  # B x F
+        out = torch.cat((quadratic, unary), dim=1)  # B x (F + D)
 
-        # XXX projection????????
-        #out = self.projection(out)
+        y_deep = embeddings.view(-1, self.num_fields * self.dim)
+        for i in range(self.num_deep_layers):
+            y_deep = getattr(self, "deep_%i")()
+
         logsigmoid = nn.LogSigmoid()
         return logsigmoid(out)
