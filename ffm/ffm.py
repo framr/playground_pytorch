@@ -33,7 +33,7 @@ class FFM(nn.Module):
         if self.use_unary:
             self.unary = nn.Embedding(self.num_features, 1)
             out_dim += self.num_fields
-        self.projection = nn.Linear(out_dim, 1)
+        self.projection = nn.Linear(out_dim, 2)
         # initialize parameters
         glorot(self.embeddings)
         glorot(self.projection)
@@ -57,8 +57,6 @@ class FFM(nn.Module):
             out = torch.cat((quadratic, unary), dim=1)  # B x (F + D)
         else:
             out = quadratic
-
-        # XXX projection????????
-        #out = self.projection(out)
-        logsigmoid = nn.LogSigmoid()
-        return logsigmoid(out)
+        p = self.projection(out)
+        logsoftmax = nn.LogSoftmax(dim=1)
+        return logsoftmax(p)

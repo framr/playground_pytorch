@@ -39,7 +39,7 @@ def train_data():
             "use_unary": True,
             "num_iter": 5,
             "opt_cls": optim.Adam,
-            "opt_kwargs": {"lr": 0.01},
+            "opt_kwargs": {"lr": 1e-3},
             "batch_size": 64
             }
 

@@ -29,13 +29,15 @@ def train_ffm(train_iter, test, conf):
     test_features = autograd.Variable(LongTensor(test.X))
     test_logprob = model.forward(test_features)
     test_loss = loss_func(test_logprob, test_targets)
-    info("it={it}, test loss={loss}".format(it=-1, loss=float(test_loss)))
+    info("it={it}, test loss={loss}".format(it=-1, loss=float(test_loss.data) / len(test.X)))
 
     iter_loss = []
     for it in range(conf["num_iter"]):
         train_iter.reset()
         iter_loss.append(0)
+        num_examples = 0
         for batch in train_iter:
+            num_examples += len(batch.X)
             targets = autograd.Variable(LongTensor(batch.y))
             features = autograd.Variable(LongTensor(batch.X))
             model.zero_grad()
@@ -47,6 +49,7 @@ def train_ffm(train_iter, test, conf):
 
         test_logprob = model.forward(test_features)
         test_loss = loss_func(test_logprob, test_targets)
-        info("it={it}, train loss={loss}, test_loss={test}".format(it=it, loss=float(iter_loss[-1]),
-                                                                       test=float(test_loss)))
+        info("it={it}, train loss={loss}, test_loss={test}".format(it=it,
+                                                                   loss=float(iter_loss[-1]) / num_examples,
+                                                                   test=float(test_loss) / len(test.X)))
         #print(float(test_loss))
