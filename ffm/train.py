@@ -21,7 +21,7 @@ def optimizer_factory(model, conf):
 
 def train_ffm(train_iter, test, conf):
     model = FFM(**conf)
-    loss_func = nn.NLLLoss()
+    loss_func = nn.NLLLoss(size_average=False)
     optimizer = optimizer_factory(model, conf)
 
     # Loss on test before learning
@@ -29,12 +29,11 @@ def train_ffm(train_iter, test, conf):
     test_features = autograd.Variable(LongTensor(test.X))
     test_logprob = model.forward(test_features)
     test_loss = loss_func(test_logprob, test_targets)
-    info("it={it}, test loss={loss}".format(it=-1, loss=float(test_loss.data) / len(test.X)))
+    info("it={it}, test loss={loss}".format(it=-1, loss=float(test_loss.data) / len(test.y)))
 
-    iter_loss = []
     for it in range(conf["num_iter"]):
         train_iter.reset()
-        iter_loss.append(0)
+        iter_loss = 0
         num_examples = 0
         for batch in train_iter:
             num_examples += len(batch.X)
@@ -43,13 +42,14 @@ def train_ffm(train_iter, test, conf):
             model.zero_grad()
             logprob = model.forward(features)
             loss = loss_func(logprob, targets)
+            iter_loss += float(loss)
+
             loss.backward()
             optimizer.step()
-            iter_loss[-1] += loss.data
 
         test_logprob = model.forward(test_features)
         test_loss = loss_func(test_logprob, test_targets)
         info("it={it}, train loss={loss}, test_loss={test}".format(it=it,
-                                                                   loss=float(iter_loss[-1]) / num_examples,
-                                                                   test=float(test_loss) / len(test.X)))
+                                                                   loss=float(iter_loss) / num_examples,
+                                                                   test=float(test_loss) / len(test.y)))
         #print(float(test_loss))

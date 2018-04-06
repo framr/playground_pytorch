@@ -137,5 +137,5 @@ if __name__ == "__main__":
     min_counts = 5
     feature_cols = ["PageID", "OrderID"]
     target_col= "IsClick"
-    #preprocess(infile, outfile, feature_cols, target_col, min_counts=min_counts)
+    preprocess(infile, outfile, feature_cols, target_col, min_counts=min_counts)
     train_test_split(outfile, test_prob=0.1)
