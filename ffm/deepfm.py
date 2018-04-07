@@ -64,6 +64,7 @@ class DeepFM(nn.Module):
         unary = self.unary(X)  # B x F x 1
         unary = unary.squeeze(dim=2)  # B x F
 
+        # TODO: Add dropout and batchnorm layers
         y_deep = embeddings.view(-1, self.num_fields * self.dim)
         for i in range(self.num_deep_layers):
             y_deep = getattr(self, "deep_%d" % i)(y_deep)
