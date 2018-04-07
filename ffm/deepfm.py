@@ -18,12 +18,13 @@ def glorot(m):
 
 class DeepFM(nn.Module):
     def __init__(self, *args, **kwargs):
-        super(FFM, self).__init__()
+        super(DeepFM, self).__init__()
         self.num_features = kwargs["num_features"]
         self.dim = kwargs["dim"]
         self.num_fields = kwargs["num_fields"]
         self.deep_layers = kwargs["deep_layers"]
         self.num_deep_layers = len(self.deep_layers)
+        self.deep_activation = kwargs["deep_activation"]
 
         # create parameters
         # embeddings
@@ -41,13 +42,13 @@ class DeepFM(nn.Module):
             setattr(self, "deep_%d" % i, nn.Linear(self.deep_layers[i - 1], self.deep_layers[i]))
             self.out_dim += self.deep_layers[-1]
 
-        self.projection = nn.Linear(self.out_dim, 1)
+        self.projection = nn.Linear(self.out_dim, 2)
         # initialize parameters
         glorot(self.embeddings)
         glorot(self.projection)
         glorot(self.unary)
         for i in range(self.num_deep_layers):
-            glorot(getattr(self, "deep_%i"))
+            glorot(getattr(self, "deep_%d" % i))
 
     def forward(self, X):
         """
@@ -62,11 +63,13 @@ class DeepFM(nn.Module):
         quadratic = 0.5 * (torch.mul(embeddings_sum, embeddings_sum) - sum_squares)
         unary = self.unary(X)  # B x F x 1
         unary = unary.squeeze(dim=2)  # B x F
-        out = torch.cat((quadratic, unary), dim=1)  # B x (F + D)
 
         y_deep = embeddings.view(-1, self.num_fields * self.dim)
         for i in range(self.num_deep_layers):
-            y_deep = getattr(self, "deep_%i")()
+            y_deep = getattr(self, "deep_%d" % i)(y_deep)
+            y_deep = self.deep_activation(y_deep)
 
-        logsigmoid = nn.LogSigmoid()
-        return logsigmoid(out)
+        out = torch.cat((quadratic, unary, y_deep), dim=1)  # B x (F + D + DEEP_OUT_DIM)
+        out = self.projection(out)
+        logsoftmax = nn.LogSoftmax(dim=1)
+        return logsoftmax(out)

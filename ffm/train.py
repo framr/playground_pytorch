@@ -19,8 +19,7 @@ def optimizer_factory(model, conf):
     return opt
 
 
-def train_ffm(train_iter, test, conf):
-    model = FFM(**conf)
+def train_model(model, train_iter, test, conf):
     loss_func = nn.NLLLoss(size_average=False)
     optimizer = optimizer_factory(model, conf)
 
